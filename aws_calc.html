@@ -95,12 +95,14 @@ var EC2 = {
       var cloud_front_per_month
          = this.using_option.cloud_front * this.cloud_front_per_gb;
 
-      var running_cost
-         = instance_per_hour * 24 * 30
-         + ebs_per_month
-         + s3_per_month
-         + cloud_front_per_month
-         + elastic_ip_address_per_hour * 24 * 30;
+      var running_cost_per_year
+         = instance_per_hour * 24 * 365
+         + ebs_per_month * 12
+         + s3_per_month * 12
+         + cloud_front_per_month * 12
+         + elastic_ip_address_per_hour * 24 * 365;
+
+      var running_cost = running_cost_per_year / 12;
 
       var initial_cost
          = running_cost + contract_deposit;
