@@ -22,6 +22,11 @@ th {
    background-color: #CCCCCC;
    text-align: right;
 }
+
+.price_comment {
+   margin-left: 1em;
+   color: #666666;
+}
 </style>
 <script type="text/javascript" src="js/jquery-1.3.2.min.js"></script>
 <script type="text/javascript">
@@ -73,34 +78,55 @@ var EC2 = {
          $('#cost_per_year_'+key).text( costs.cost_per_year.toFixed(2) );
          $('#cost_per_3year_'+key).text( costs.cost_per_3year.toFixed(2) );
       }
+
+      var keys = ['elastic_ip', 's3_storage', 's3_transfer', 'cloud_front', 'ebs']
+      for ( var i = 0; i < keys.length; i++ ) {
+         var method = 'this.calc_for_' + keys[i] + '()';
+         $('#' + keys[i] + '_per_month').text( '($' + this.round( eval( method ) ) + ' / month)' );
+      }
+   },
+   calc_for_elastic_ip: function () {
+      var price = this.using_option.elastic_ip
+         ? this.elastic_ip_address_per_hour
+         : 0;
+      return price * 24 * 365 / 12;
+   },
+   calc_for_s3_storage: function () {
+      return this.using_option.s3_storage * this.s3_storage_per_gb;
+   },
+   calc_for_s3_transfer: function () {
+      return this.using_option.s3_transfer * this.s3_transfer_per_gb;
+   },
+   calc_for_cloud_front: function () {
+      return this.using_option.cloud_front * this.cloud_front_per_gb;
+   },
+   calc_for_ebs: function () {
+      return this.using_option.ebs * this.ebs_per_gb;
    },
    calculate: function (contract) {
       var instance_per_hour = this.instance_per_hour[contract];
       var contract_deposit  = this.contract_deposit[contract];
-      var ebs_per_month     = this.using_option.ebs * this.ebs_per_gb;
-      var elastic_ip_address_per_hour
-         = this.using_option.elastic_ip
-            ? this.elastic_ip_address_per_hour
-            : 0;
+      var ebs_per_month     = this.calc_for_ebs();
+
       var contract_deposit_per_year = 0;
       if ( contract_deposit ) {
          contract_deposit_per_year
             = contract_deposit / contract;
       }
 
-      var s3_per_month
-         = this.using_option.s3_storage * this.s3_storage_per_gb
-         + this.using_option.s3_transfer * this.s3_transfer_per_gb;
+      var elastic_ip_address_per_month = this.calc_for_elastic_ip();
 
-      var cloud_front_per_month
-         = this.using_option.cloud_front * this.cloud_front_per_gb;
+      var s3_per_month
+         = this.calc_for_s3_storage() + this.calc_for_s3_transfer();
+
+      var cloud_front_per_month = this.calc_for_cloud_front();
 
       var running_cost_per_year
          = instance_per_hour * 24 * 365
          + ebs_per_month * 12
          + s3_per_month * 12
          + cloud_front_per_month * 12
-         + elastic_ip_address_per_hour * 24 * 365;
+         + elastic_ip_address_per_month * 12;
 
       var running_cost = running_cost_per_year / 12;
 
@@ -142,14 +168,14 @@ var EC2 = {
 <h2>使用するオプション</h2>
 
 <ul>
-  <li><input type="checkbox" name="elastic_ip_address" value="1" checked="checked" id="elastic_ip_address" /> 固定 IP アドレス</li>
+  <li><input type="checkbox" name="elastic_ip_address" value="1" checked="checked" id="elastic_ip_address" /> <label for="elastic_ip_address">固定 IP アドレス</label><span id="elastic_ip_per_month" class="price_comment"></span></li>
   <li>S3</li>
   <ul>
-    <li>保存容量 <input type="text" name="s3_storage" value="5" size="4" id="s3_storage" /> GB</li>
-    <li>月間転送量 <input type="text" name="s3_transfer" value="1" size="4" id="s3_transfer" /> GB</li>
+    <li>保存容量 <input type="text" name="s3_storage" value="5" size="4" id="s3_storage" /> GB <span id="s3_storage_per_month" class="price_comment"></span></li>
+    <li>月間転送量 <input type="text" name="s3_transfer" value="1" size="4" id="s3_transfer" /> GB <span id="s3_transfer_per_month" class="price_comment"></span></li>
   </ul>
-  <li>CloudFront 月間転送量 <input type="text" name="cloud_front" value="1" size="4" id="cloud_front" /> GB</li>
-  <li>EBS ボリューム <input type="text" name="ebs" value="" size="4" id="ebs" /> GB</li>
+  <li>CloudFront 月間転送量 <input type="text" name="cloud_front" value="1" size="4" id="cloud_front" /> GB <span id="cloud_front_per_month" class="price_comment"></span></li>
+  <li>EBS ボリューム <input type="text" name="ebs" value="" size="4" id="ebs" /> GB <span id="ebs_per_month" class="price_comment"></span></li>
 </ul>
 
 </form>
