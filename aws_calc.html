@@ -48,25 +48,51 @@ var EC2 = {
       1: 325,
       3: 500
    },
-   ebs_per_gb: 0.1,
-   elastic_ip_address_per_hour: 0.01,
-   cloud_front_per_gb: 0.221,
-   s3_storage_per_gb: 0.15,
-   s3_transfer_per_gb: 0.17,
-   using_option: {
-      elastic_ip: 0,
-      ebs: 0,
-      s3_storage: 0,
-      s3_transfer: 0,
-      cloud_front: 0,
+   ebs: {
+      use: 0,
+      per_gb: 0.1,
+      calc: function () {
+         return this.use * this.per_gb;
+      }
+   },
+   elastic_ip: {
+      use: 0,
+      per_hour: 0.01,
+      calc: function () {
+         var price = this.use
+            ? this.per_hour
+            : 0;
+         return price * 24 * 365 / 12;
+      }
+   },
+   cloud_front: {
+      use: 0,
+      per_gb: 0.221,
+      calc: function () {
+         return this.use * this.per_gb;
+      }
+   },
+   s3_volume: {
+      use: 0,
+      per_gb: 0.15,
+      calc: function () {
+         return this.use * this.per_gb;
+      }
+   },
+   s3_transfer: {
+      use: 0,
+      per_gb: 0.17,
+      calc: function () {
+         return this.use * this.per_gb;
+      }
    },
    calcAll: function () {
 
-      this.using_option.ebs = $('#ebs').val();
-      this.using_option.elastic_ip = $('#elastic_ip_address:checked').val();
-      this.using_option.s3_storage = $('#s3_storage').val();
-      this.using_option.s3_transfer = $('#s3_transfer').val();
-      this.using_option.cloud_front = $('#cloud_front').val();
+      this.ebs.use = $('#ebs').val();
+      this.elastic_ip.use = $('#elastic_ip_address:checked').val();
+      this.s3_volume.use = $('#s3_volume').val();
+      this.s3_transfer.use = $('#s3_transfer').val();
+      this.cloud_front.use = $('#cloud_front').val();
 
       for ( var key in this.contract_deposit ) {
          var costs = this.calculate(key);
@@ -79,34 +105,17 @@ var EC2 = {
          $('#cost_per_3year_'+key).text( costs.cost_per_3year.toFixed(2) );
       }
 
-      var keys = ['elastic_ip', 's3_storage', 's3_transfer', 'cloud_front', 'ebs']
+      var keys = ['elastic_ip', 's3_volume', 's3_transfer', 'cloud_front', 'ebs']
       for ( var i = 0; i < keys.length; i++ ) {
-         var method = 'this.calc_for_' + keys[i] + '()';
-         $('#' + keys[i] + '_per_month').text( '($' + this.round( eval( method ) ) + ' / month)' );
+         $('#' + keys[i] + '_per_month').text(
+            '($' + this.round( this[keys[i]].calc() ) + ' / month)'
+          );
       }
-   },
-   calc_for_elastic_ip: function () {
-      var price = this.using_option.elastic_ip
-         ? this.elastic_ip_address_per_hour
-         : 0;
-      return price * 24 * 365 / 12;
-   },
-   calc_for_s3_storage: function () {
-      return this.using_option.s3_storage * this.s3_storage_per_gb;
-   },
-   calc_for_s3_transfer: function () {
-      return this.using_option.s3_transfer * this.s3_transfer_per_gb;
-   },
-   calc_for_cloud_front: function () {
-      return this.using_option.cloud_front * this.cloud_front_per_gb;
-   },
-   calc_for_ebs: function () {
-      return this.using_option.ebs * this.ebs_per_gb;
    },
    calculate: function (contract) {
       var instance_per_hour = this.instance_per_hour[contract];
       var contract_deposit  = this.contract_deposit[contract];
-      var ebs_per_month     = this.calc_for_ebs();
+      var ebs_per_month     = this.ebs.calc();
 
       var contract_deposit_per_year = 0;
       if ( contract_deposit ) {
@@ -114,12 +123,12 @@ var EC2 = {
             = contract_deposit / contract;
       }
 
-      var elastic_ip_address_per_month = this.calc_for_elastic_ip();
+      var elastic_ip_address_per_month = this.elastic_ip.calc();
 
       var s3_per_month
-         = this.calc_for_s3_storage() + this.calc_for_s3_transfer();
+         = this.s3_volume.calc() + this.s3_transfer.calc();
 
-      var cloud_front_per_month = this.calc_for_cloud_front();
+      var cloud_front_per_month = this.cloud_front.calc();
 
       var running_cost_per_year
          = instance_per_hour * 24 * 365
@@ -171,7 +180,7 @@ var EC2 = {
   <li><input type="checkbox" name="elastic_ip_address" value="1" checked="checked" id="elastic_ip_address" /> <label for="elastic_ip_address">固定 IP アドレス</label><span id="elastic_ip_per_month" class="price_comment"></span></li>
   <li>S3</li>
   <ul>
-    <li>保存容量 <input type="text" name="s3_storage" value="5" size="4" id="s3_storage" /> GB <span id="s3_storage_per_month" class="price_comment"></span></li>
+    <li>保存容量 <input type="text" name="s3_volume" value="5" size="4" id="s3_volume" /> GB <span id="s3_volume_per_month" class="price_comment"></span></li>
     <li>月間転送量 <input type="text" name="s3_transfer" value="1" size="4" id="s3_transfer" /> GB <span id="s3_transfer_per_month" class="price_comment"></span></li>
   </ul>
   <li>CloudFront 月間転送量 <input type="text" name="cloud_front" value="1" size="4" id="cloud_front" /> GB <span id="cloud_front_per_month" class="price_comment"></span></li>
