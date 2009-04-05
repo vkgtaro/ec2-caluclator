@@ -55,16 +55,6 @@ var EC2 = {
          return this.use * this.per_gb;
       }
    },
-   elastic_ip: {
-      use: 0,
-      per_hour: 0.01,
-      calc: function () {
-         var price = this.use
-            ? this.per_hour
-            : 0;
-         return price * 24 * 365 / 12;
-      }
-   },
    cloud_front: {
       use: 0,
       per_gb: 0.221,
@@ -89,7 +79,6 @@ var EC2 = {
    calcAll: function () {
 
       this.ebs.use = $('#ebs').val();
-      this.elastic_ip.use = $('#elastic_ip_address:checked').val();
       this.s3_volume.use = $('#s3_volume').val();
       this.s3_transfer.use = $('#s3_transfer').val();
       this.cloud_front.use = $('#cloud_front').val();
@@ -123,8 +112,6 @@ var EC2 = {
             = contract_deposit / contract;
       }
 
-      var elastic_ip_address_per_month = this.elastic_ip.calc();
-
       var s3_per_month
          = this.s3_volume.calc() + this.s3_transfer.calc();
 
@@ -134,8 +121,7 @@ var EC2 = {
          = instance_per_hour * 24 * 365
          + ebs_per_month * 12
          + s3_per_month * 12
-         + cloud_front_per_month * 12
-         + elastic_ip_address_per_month * 12;
+         + cloud_front_per_month * 12;
 
       var running_cost = running_cost_per_year / 12;
 
@@ -177,7 +163,6 @@ var EC2 = {
 <h2>使用するオプション</h2>
 
 <ul>
-  <li><input type="checkbox" name="elastic_ip_address" value="1" checked="checked" id="elastic_ip_address" /> <label for="elastic_ip_address">固定 IP アドレス</label><span id="elastic_ip_per_month" class="price_comment"></span></li>
   <li>S3</li>
   <ul>
     <li>保存容量 <input type="text" name="s3_volume" value="5" size="4" id="s3_volume" /> GB <span id="s3_volume_per_month" class="price_comment"></span></li>
